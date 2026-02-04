@@ -28,7 +28,7 @@ const services = [
   {
     icon: Clock,
     title: 'Emergency Service',
-    description: '24/7 emergency repairs to minimize downtime for your business',
+    description: 'Coming soon to minimize downtime for your business',
     color: 'from-red-500 to-rose-500',
   },
   {
