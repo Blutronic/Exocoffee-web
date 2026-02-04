@@ -43,6 +43,9 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   
+  // Default center (you can change this to your business location)
+  const businessLocation: [number, number] = [-33.814115120092275, 18.620667236860275]; // Thaba park as example
+
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_email: '',
@@ -54,16 +57,13 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     preferred_date: '',
   });
 
-  const [position, setPosition] = useState<[number, number] | null>(null);
+  const [position, setPosition] = useState<[number, number] | null>(businessLocation);
   const [distance, setDistance] = useState<number | null>(null);
-  
-  // Default center (you can change this to your business location)
-  const businessLocation: [number, number] = [40.7128, -74.0060]; // NYC as example
 
   useEffect(() => {
     if (position) {
-      // Calculate distance from business location
-      const R = 3959; // Earth radius in miles
+      // Calculate distance from business location (in kilometers)
+      const R = 6371; // Earth radius in kilometers
       const dLat = (position[0] - businessLocation[0]) * Math.PI / 180;
       const dLon = (position[1] - businessLocation[1]) * Math.PI / 180;
       const a = 
@@ -132,10 +132,10 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
             <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-6 mb-6">
               <div className="text-sm text-zinc-500 mb-2">Estimated Cost</div>
               <div className="text-3xl font-bold text-cyan-500">
-                ${estimatedCost.toFixed(2)}
+                {'$' + estimatedCost.toFixed(2)}
               </div>
               <div className="text-xs text-zinc-500 mt-2">
-                Includes ${distance?.toFixed(1)} mi travel
+                Includes {distance?.toFixed(1)} km travel
               </div>
             </div>
           )}
@@ -319,7 +319,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                 </label>
                 <div className="h-80 rounded-xl overflow-hidden border border-zinc-700">
                   <MapContainer
-                    center={businessLocation}
+                    center={position || businessLocation}
                     zoom={13}
                     style={{ height: '100%', width: '100%' }}
                   >
@@ -333,7 +333,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                 {distance !== null && (
                   <div className="mt-3 text-sm text-zinc-400 flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
-                    Distance: {distance} miles from our location
+                    Distance: {distance?.toFixed(1)} km from our location
                   </div>
                 )}
               </div>
