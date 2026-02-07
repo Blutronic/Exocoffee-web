@@ -42,6 +42,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
+  const [fetchingAddress, setFetchingAddress] = useState(false);
   
   // Default center (you can change this to your business location)
   const businessLocation: [number, number] = [-33.814115120092275, 18.620667236860275]; // Thaba park as example
@@ -75,6 +76,34 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       const dist = R * c;
       setDistance(Math.round(dist * 10) / 10);
+
+      // Reverse geocode to get address with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const fetchAddress = async () => {
+        setFetchingAddress(true);
+        try {
+          const response = await fetch(
+            `/api/reverse-geocode?lat=${position[0]}&lon=${position[1]}`,
+            { signal: controller.signal }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.address) {
+              setFormData(prev => ({ ...prev, shop_address: data.address }));
+            }
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name !== 'AbortError') {
+            console.error('Failed to fetch address:', error);
+          }
+        } finally {
+          setFetchingAddress(false);
+          clearTimeout(timeoutId);
+        }
+      };
+      fetchAddress();
     }
   }, [position]);
 
@@ -340,8 +369,9 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                   value={formData.shop_address}
                   onChange={handleInputChange}
                   required
-                  placeholder="123 Main St, City, State"
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors"
+                  placeholder={fetchingAddress ? "Fetching address..." : "Uit 3a, Thaba Park, Hooggelegen Rd, Durbanville, Cape Town"}
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50"
+                  disabled={fetchingAddress}
                 />
               </div>
 
@@ -354,7 +384,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                   <MapContainer
                     center={position || businessLocation}
                     zoom={13}
-                    style={{ height: '100%', width: '100%' }}
+                    style={{ height: '100%', width: '100%', cursor: 'pointer' }}
                   >
                     <TileLayer
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

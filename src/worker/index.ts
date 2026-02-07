@@ -191,4 +191,38 @@ app.put("/api/settings", zValidator("json", settingsSchema), async (c) => {
   return c.json({ success: true });
 });
 
+// Reverse geocode endpoint to handle mobile CORS issues
+app.get("/api/reverse-geocode", async (c) => {
+  const lat = c.req.query("lat");
+  const lon = c.req.query("lon");
+
+  if (!lat || !lon) {
+    return c.json({ error: "Missing lat or lon parameters" }, 400);
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+      {
+        headers: {
+          "User-Agent": "ExoCoffee-Web",
+        },
+      }
+    );
+
+    const data = await response.json() as any;
+    
+    if (data.address) {
+      const address = data.address;
+      const formattedAddress = `${address.house_number || ''} ${address.road || ''}, ${address.suburb || address.town || address.city || ''}, ${address.state || ''}, ${address.postcode || ''}`.trim().replace(/^[\s,]+|[\s,]+$/g, '');
+      return c.json({ address: formattedAddress });
+    }
+
+    return c.json({ address: "" });
+  } catch (error) {
+    console.error("Reverse geocoding error:", error);
+    return c.json({ error: "Failed to reverse geocode" }, 500);
+  }
+});
+
 export default app;
