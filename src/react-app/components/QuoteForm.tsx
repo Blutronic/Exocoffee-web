@@ -53,6 +53,8 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     shop_name: '',
     shop_address: '',
     machine_type: '',
+    machine_model: '',
+    service_type: '',
     issue_description: '',
     preferred_date: '',
   });
@@ -238,6 +240,20 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Machine make/model
+                  </label>
+                  <input
+                    type="text"
+                    name="machine_model"
+                    value={formData.machine_model}
+                    onChange={handleInputChange}
+                    placeholder="e.g., La Marzocco Linea PB"
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors"
+                  />  
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                     Machine Type
                   </label>
                   <select
@@ -247,10 +263,27 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                     className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors"
                   >
                     <option value="">Select type</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="semi-automatic">Semi-Automatic</option>
-                    <option value="automatic">Automatic</option>
-                    <option value="super-automatic">Super Automatic</option>
+                    <option value="1-group">1 group</option>
+                    <option value="2-group">2 group</option>
+                    <option value="3-group">3 group</option>
+                    <option value="4-group">4 group</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Service Type
+                  </label>
+                  <select
+                    name="service_type"
+                    value={formData.service_type}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors"
+                  >
+                    <option value="">Select service type</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="repair">Repair</option>
+                    <option value="installation">Installation</option>
                   </select>
                 </div>
 
