@@ -74,8 +74,8 @@ export default function AdminGallery({ onClose, onOpenSettings }: AdminGalleryPr
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-6xl w-full my-8">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-4xl w-full my-4 md:my-8 mt-0 md:mt-0">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <h2 className="text-2xl font-bold text-white">Manage Gallery</h2>
