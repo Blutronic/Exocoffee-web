@@ -110,7 +110,7 @@ export default function HexagonalBackground() {
           // Only draw some hexagons randomly for a scattered effect
           if (Math.random() > 0.95) {
             const alpha = Math.random() * 0.15 + 0.05;
-            drawHexagon(hexX, hexY, hexSize * 0.8, alpha);
+            drawHexagon(hexX, hexY, hexSize * 0.7, alpha);
           }
         }
       }
