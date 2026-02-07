@@ -32,8 +32,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
+          <div className="text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
               <img 
                 src="https://mocha-cdn.com/019b0efe-e215-7a5a-857c-14f680a4f2b2/Exocoffee-artwork.png" 
                 alt="Exocoffee Logo" 
@@ -47,7 +47,7 @@ export default function Footer() {
           </div>
 
           {/* Quick Links */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold mb-4">Services</h3>
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Machine Repair</a></li>
@@ -58,22 +58,22 @@ export default function Footer() {
           </div>
 
           {/* Contact */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold mb-4">Contact Us</h3>
             <ul className="space-y-3 text-sm">
-              <li className="flex items-center gap-2 text-zinc-400">
+              <li className="flex items-center justify-center md:justify-start gap-2 text-zinc-400">
                 <Phone className="w-4 h-4" />
                 <a href={`tel:${settings.footer_phone.replace(/\D/g, '')}`} className="hover:text-cyan-500 transition-colors">
                   {settings.footer_phone}
                 </a>
               </li>
-              <li className="flex items-center gap-2 text-zinc-400">
+              <li className="flex items-center justify-center md:justify-start gap-2 text-zinc-400">
                 <Mail className="w-4 h-4" />
                 <a href={`mailto:${settings.footer_email}`} className="hover:text-cyan-500 transition-colors">
                   {settings.footer_email}
                 </a>
               </li>
-              <li className="flex items-start gap-2 text-zinc-400">
+              <li className="flex items-start justify-center md:justify-start gap-2 text-zinc-400">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{settings.footer_address.split('\n').map((line, i) => (
                   <span key={i}>
@@ -86,9 +86,9 @@ export default function Footer() {
           </div>
 
           {/* Social & Hours */}
-          <div>
+          <div className="text-center md:text-left">
             <h3 className="text-white font-semibold mb-4">Follow Us</h3>
-            <div className="flex gap-3 mb-6">
+            <div className="flex gap-3 mb-6 justify-center md:justify-start">
               <a
                 href={settings.social_facebook}
                 target="_blank"
