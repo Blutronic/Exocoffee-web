@@ -33,7 +33,7 @@ export default function Hero({ onGetQuote }: HeroProps) {
         {/* Logo */}
         <div className="mb-8 flex justify-center pt-0 relative">
           <img 
-            src="https://mocha-cdn.com/019b0efe-e215-7a5a-857c-14f680a4f2b2/Exocoffee-artwork.png" 
+            src="/images/Exocoffee artwork.png" 
             alt="Exocoffee Logo" 
             className="h-[12rem] md:h-[20rem] object-contain rounded-[200px] border-[50px] border-black/50"
           />

@@ -35,7 +35,7 @@ export default function Footer() {
           <div className="text-center md:text-left">
             <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
               <img 
-                src="https://mocha-cdn.com/019b0efe-e215-7a5a-857c-14f680a4f2b2/Exocoffee-artwork.png" 
+                src="/images/Exocoffee artwork trans.png" 
                 alt="Exocoffee Logo" 
                 className="h-10 object-contain"
               />
