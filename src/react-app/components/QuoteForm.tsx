@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, MapPin, CheckCircle } from 'lucide-react';
+import { X, MapPin, CheckCircle, Upload } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -77,6 +77,9 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
 
   const [position, setPosition] = useState<[number, number] | null>(businessLocation);
   const [distance, setDistance] = useState<number | null>(null);
+  const [issueImages, setIssueImages] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Geocode address and update position
   const geocodeAddress = async (address: string) => {
@@ -102,6 +105,48 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     } finally {
       setGeocodingAddress(false);
     }
+  };
+
+  // Handle file selection from input
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    
+    const newFiles = Array.from(files).filter(file => {
+      // Only allow image files
+      return file.type.startsWith('image/');
+    });
+    
+    // Limit to 5 images
+    setIssueImages(prev => [...prev, ...newFiles].slice(0, 5));
+  };
+
+  // Handle drag over
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+
+  // Handle drag leave
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  };
+
+  // Handle drop
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    
+    const files = e.dataTransfer.files;
+    handleFileSelect(files);
+  };
+
+  // Remove image
+  const removeImage = (index: number) => {
+    setIssueImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // Debounced address input handler
@@ -183,6 +228,25 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     }
 
     try {
+      // Upload images if any
+      let imageUrls: string[] = [];
+      for (const image of issueImages) {
+        const formDataImg = new FormData();
+        formDataImg.append('file', image);
+        formDataImg.append('quote_image', 'true');
+        
+        const uploadResponse = await fetch('/api/quotes/images/upload', {
+          method: 'POST',
+          body: formDataImg,
+        });
+
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          imageUrls.push(uploadData.image_url);
+        }
+      }
+
+      // Submit the quote with image URLs
       const response = await fetch('/api/quotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -191,6 +255,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
           shop_latitude: position[0],
           shop_longitude: position[1],
           travel_distance: distance,
+          issue_images: imageUrls,
         }),
       });
 
@@ -246,7 +311,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start md:items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-4xl w-full my-4 md:my-8 mt-0 md:mt-0">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
@@ -261,7 +326,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
 
         {/* Progress indicator */}
         <div className="flex gap-2 p-6 pb-0">
-          {[1, 2].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
@@ -409,6 +474,76 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Upload Photos of the Issue (Optional)
+                </label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                    dragOver
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-600'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleFileSelect(e.target.files)}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center gap-3">
+                    <Upload className="w-8 h-8 text-zinc-400" />
+                    <div>
+                      <p className="text-zinc-300 font-medium">
+                        Drag photos here or{' '}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-cyan-400 hover:text-cyan-300 underline"
+                        >
+                          browse
+                        </button>
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        PNG, JPG up to 5 images
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Image previews */}
+                {issueImages.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs text-zinc-400 mb-3">
+                      {issueImages.length} image{issueImages.length !== 1 ? 's' : ''} selected
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {issueImages.map((file, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Issue ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-zinc-700"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => setStep(2)}
@@ -477,10 +612,132 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                   Back
                 </button>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => setStep(3)}
                   className="flex-1 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl transition-colors duration-300"
                 >
-                  Submit Quote Request
+                  Review & Submit
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Review */}
+          {step === 3 && (
+            <div className="p-6 space-y-6">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4">Review Your Quote Request</h3>
+                <p className="text-zinc-400 text-sm mb-6">Please check all the information before submitting</p>
+              </div>
+
+              {/* Customer Information */}
+              <div className="bg-zinc-800/50 rounded-xl p-4 space-y-3">
+                <h4 className="font-semibold text-white text-sm">Customer Information</h4>
+                <div className="grid md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-zinc-500">Name</p>
+                    <p className="text-white">{formData.customer_name || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Email</p>
+                    <p className="text-white">{formData.customer_email || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Phone</p>
+                    <p className="text-white">{formData.customer_phone || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Shop/Business Name</p>
+                    <p className="text-white">{formData.shop_name || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location Information */}
+              <div className="bg-zinc-800/50 rounded-xl p-4 space-y-3">
+                <h4 className="font-semibold text-white text-sm">Location Information</h4>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-zinc-500">Shop Address</p>
+                    <p className="text-white">{formData.shop_address || '—'}</p>
+                  </div>
+                  {distance !== null && (
+                    <div>
+                      <p className="text-zinc-500">Travel Distance</p>
+                      <p className="text-white">{distance.toFixed(1)} km from our location</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Machine Information */}
+              <div className="bg-zinc-800/50 rounded-xl p-4 space-y-3">
+                <h4 className="font-semibold text-white text-sm">Machine Information</h4>
+                <div className="grid md:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-zinc-500">Make/Model</p>
+                    <p className="text-white">{formData.machine_model || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Machine Type</p>
+                    <p className="text-white">{formData.machine_type || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Service Type</p>
+                    <p className="text-white">{formData.service_type || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Preferred Date</p>
+                    <p className="text-white">{formData.preferred_date || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Issue Description */}
+              <div className="bg-zinc-800/50 rounded-xl p-4 space-y-3">
+                <h4 className="font-semibold text-white text-sm">Issue Description</h4>
+                <p className="text-white text-sm whitespace-pre-wrap">{formData.issue_description || '—'}</p>
+              </div>
+
+              {/* Images */}
+              {issueImages.length > 0 && (
+                <div className="bg-zinc-800/50 rounded-xl p-4 space-y-3">
+                  <h4 className="font-semibold text-white text-sm">Attached Photos ({issueImages.length})</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {issueImages.map((file, index) => (
+                      <img
+                        key={index}
+                        src={URL.createObjectURL(file)}
+                        alt={`Issue ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border border-zinc-700"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cost */}
+              {estimatedCost && (
+                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4 text-center">
+                  <p className="text-zinc-400 text-sm mb-2">Estimated Cost</p>
+                  <p className="text-3xl font-bold text-cyan-500">${estimatedCost.toFixed(2)}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="flex-1 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-semibold rounded-xl transition-colors duration-300"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-colors duration-300"
+                >
+                  Confirm & Submit
                 </button>
               </div>
             </div>

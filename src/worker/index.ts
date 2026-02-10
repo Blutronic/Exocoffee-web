@@ -17,6 +17,7 @@ const quoteSchema = z.object({
   issue_description: z.string().min(1),
   preferred_date: z.string().optional(),
   travel_distance: z.number().optional(),
+  issue_images: z.array(z.string()).optional(),
 });
 
 // Submit quote request
@@ -51,11 +52,71 @@ app.post("/api/quotes", zValidator("json", quoteSchema), async (c) => {
     )
     .run();
 
+  const quoteId = result.meta.last_row_id;
+
+  // Store image references if provided
+  if (data.issue_images && Array.isArray(data.issue_images) && data.issue_images.length > 0) {
+    for (const imageUrl of data.issue_images) {
+      await c.env.DB.prepare(
+        `INSERT INTO quote_images (quote_id, image_url) VALUES (?, ?)`
+      )
+        .bind(quoteId, imageUrl)
+        .run();
+    }
+  }
+
   return c.json({ 
     success: true, 
-    quote_id: result.meta.last_row_id,
+    quote_id: quoteId,
     estimated_cost: estimatedCost 
   });
+});
+
+// Upload image for quote
+app.post("/api/quotes/images/upload", async (c) => {
+  const formData = await c.req.formData();
+  const file = formData.get("file") as File;
+  
+  if (!file) {
+    return c.json({ error: "No file provided" }, 400);
+  }
+
+  // Generate unique key for the image
+  const timestamp = Date.now();
+  const key = `quote-images/${timestamp}-${file.name}`;
+
+  // Upload to R2
+  await c.env.R2_BUCKET.put(key, file, {
+    httpMetadata: {
+      contentType: file.type,
+    },
+  });
+
+  // Return the image URL (you may need to adjust this based on your R2 setup)
+  const imageUrl = `/api/quotes/images/${key}`;
+
+  return c.json({ 
+    success: true, 
+    image_url: imageUrl,
+    key: key
+  });
+});
+
+// Get image from R2
+app.get("/api/quotes/images/*", async (c) => {
+  const key = c.req.path.replace("/api/quotes/images/", "");
+  const object = await c.env.R2_BUCKET.get(key);
+  
+  if (!object) {
+    return c.notFound();
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  headers.set("cache-control", "public, max-age=31536000");
+  
+  return c.body(object.body, { headers });
 });
 
 // Get gallery images
