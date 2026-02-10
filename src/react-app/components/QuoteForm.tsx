@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, MapPin, CheckCircle } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface QuoteFormProps {
@@ -38,11 +38,26 @@ function LocationMarker({
   return position ? <Marker position={position} /> : null;
 }
 
+// Component to update map center when position changes
+function MapUpdater({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (position) {
+      map.setView(position, 15);
+    }
+  }, [position, map]);
+
+  return null;
+}
+
 export default function QuoteForm({ onClose }: QuoteFormProps) {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [fetchingAddress, setFetchingAddress] = useState(false);
+  const [geocodingAddress, setGeocodingAddress] = useState(false);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   
   // Default center (you can change this to your business location)
   const businessLocation: [number, number] = [-33.814115120092275, 18.620667236860275]; // Thaba park as example
@@ -63,6 +78,49 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
   const [position, setPosition] = useState<[number, number] | null>(businessLocation);
   const [distance, setDistance] = useState<number | null>(null);
 
+  // Geocode address and update position
+  const geocodeAddress = async (address: string) => {
+    if (!address.trim()) return;
+
+    setGeocodingAddress(true);
+    try {
+      const response = await fetch(
+        `/api/geocode?q=${encodeURIComponent(address)}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.lat && data.lon) {
+          setPosition([data.lat, data.lon]);
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Failed to geocode address:', error);
+      }
+    } finally {
+      setGeocodingAddress(false);
+    }
+  };
+
+  // Debounced address input handler
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // If it's the address field and we're on step 2, debounce geocoding
+    if (name === 'shop_address' && step === 2 && value.trim()) {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      debounceTimer.current = setTimeout(() => {
+        geocodeAddress(value);
+      }, 1000); // Wait 1 second after user stops typing
+    }
+  };
+
+  // Calculate distance and reverse geocode when position changes
   useEffect(() => {
     if (position) {
       // Calculate distance from business location (in kilometers)
@@ -107,9 +165,14 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     }
   }, [position]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -373,6 +436,9 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                   className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50"
                   disabled={fetchingAddress}
                 />
+                {geocodingAddress && (
+                  <p className="text-xs text-cyan-400 mt-2">Finding location...</p>
+                )}
               </div>
 
               <div>
@@ -391,6 +457,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     />
                     <LocationMarker position={position} setPosition={setPosition} />
+                    <MapUpdater position={position} />
                   </MapContainer>
                 </div>
                 {distance !== null && (

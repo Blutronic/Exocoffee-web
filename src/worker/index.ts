@@ -225,4 +225,39 @@ app.get("/api/reverse-geocode", async (c) => {
   }
 });
 
+// Forward geocode endpoint to convert address to coordinates (handles mobile CORS issues)
+app.get("/api/geocode", async (c) => {
+  const q = c.req.query("q");
+
+  if (!q) {
+    return c.json({ error: "Missing q parameter" }, 400);
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=za&limit=1`,
+      {
+        headers: {
+          "User-Agent": "ExoCoffee-Web",
+        },
+      }
+    );
+
+    const data = await response.json() as any;
+    
+    if (Array.isArray(data) && data.length > 0) {
+      const result = data[0];
+      return c.json({
+        lat: parseFloat(result.lat),
+        lon: parseFloat(result.lon),
+      });
+    }
+
+    return c.json({ error: "Address not found" }, 404);
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return c.json({ error: "Failed to geocode address" }, 500);
+  }
+});
+
 export default app;
