@@ -57,7 +57,13 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
   const [estimatedCost, setEstimatedCost] = useState<number | null>(null);
   const [fetchingAddress, setFetchingAddress] = useState(false);
   const [geocodingAddress, setGeocodingAddress] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const [suggestions, setSuggestions] = useState<Array<{ label: string; lat: number; lon: number }>>([]);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(-1);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [showNoResults, setShowNoResults] = useState(false);
+  const suggestionsTimer = useRef<NodeJS.Timeout | null>(null);
+  const suggestionsController = useRef<AbortController | null>(null);
+  const suppressReverseGeocode = useRef(false);
   
   // Default center (you can change this to your business location)
   const businessLocation: [number, number] = [-33.814115120092275, 18.620667236860275]; // Thaba park as example
@@ -88,14 +94,18 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     setGeocodingAddress(true);
     try {
       const response = await fetch(
-        `/api/geocode?q=${encodeURIComponent(address)}`,
+        `/api/geocode?q=${encodeURIComponent(address)}&limit=1`,
         { signal: AbortSignal.timeout(5000) }
       );
       
       if (response.ok) {
         const data = await response.json();
-        if (data.lat && data.lon) {
-          setPosition([data.lat, data.lon]);
+        // Support the suggestion endpoint returning an array
+        const result = Array.isArray(data) ? data[0] : data;
+        if (result?.lat && result?.lon) {
+          suppressReverseGeocode.current = true;
+          setPosition([result.lat, result.lon]);
+          setFormData(prev => ({ ...prev, shop_address: result.display_name || address }));
         }
       }
     } catch (error) {
@@ -104,6 +114,57 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
       }
     } finally {
       setGeocodingAddress(false);
+    }
+  };
+
+  const fetchAddressSuggestions = async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setSuggestions([]);
+      setShowNoResults(false);
+      return;
+    }
+
+    if (suggestionsController.current) {
+      suggestionsController.current.abort();
+    }
+    const controller = new AbortController();
+    suggestionsController.current = controller;
+
+    setSuggestionsLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/geocode?q=${encodeURIComponent(trimmed)}&limit=5`,
+        { signal: controller.signal }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          const nextSuggestions = data
+            .filter((item) => item.lat && item.lon)
+            .map((item) => ({
+              label: item.display_name || `${item.lat},${item.lon}`,
+              lat: parseFloat(item.lat),
+              lon: parseFloat(item.lon),
+            }));
+
+          setSuggestions(nextSuggestions);
+          setActiveSuggestionIndex(nextSuggestions.length > 0 ? 0 : -1);
+          setShowNoResults(nextSuggestions.length === 0);
+        } else {
+          setSuggestions([]);
+          setActiveSuggestionIndex(-1);
+          setShowNoResults(true);
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Failed to fetch address suggestions:', error);
+      }
+    } finally {
+      setSuggestionsLoading(false);
     }
   };
 
@@ -149,19 +210,84 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     setIssueImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Debounced address input handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    // If it's the address field and we're on step 2, debounce geocoding
-    if (name === 'shop_address' && step === 2 && value.trim()) {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
+    if (name === 'shop_address') {
+      // Reset current selection and geolocation suggestions while typing.
+      setSuggestions([]);
+      setActiveSuggestionIndex(-1);
+      setShowNoResults(false);
+      if (suggestionsTimer.current) {
+        clearTimeout(suggestionsTimer.current);
       }
-      debounceTimer.current = setTimeout(() => {
-        geocodeAddress(value);
-      }, 1000); // Wait 1 second after user stops typing
+      suggestionsTimer.current = setTimeout(() => {
+        fetchAddressSuggestions(value);
+      }, 400);
+    }
+  };
+
+  const runAddressLookup = () => {
+    const address = formData.shop_address.trim();
+    if (address) {
+      geocodeAddress(address);
+    }
+  };
+
+  const handleAddressBlur = () => {
+    // Give clicks a chance to register on suggestion items before clearing.
+    setTimeout(() => {
+      setSuggestions([]);
+      setActiveSuggestionIndex(-1);
+    }, 150);
+  };
+
+  const handleAddressFocus = () => {
+    if (formData.shop_address.trim().length > 0) {
+      fetchAddressSuggestions(formData.shop_address);
+    }
+  };
+
+  const selectSuggestion = (suggestion: { label: string; lat: number; lon: number }) => {
+    setFormData(prev => ({ ...prev, shop_address: suggestion.label }));
+    suppressReverseGeocode.current = true;
+    setPosition([suggestion.lat, suggestion.lon]);
+    setSuggestions([]);
+    setActiveSuggestionIndex(-1);
+    setShowNoResults(false);
+  };
+
+  const handleAddressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' && suggestions.length > 0) {
+      e.preventDefault();
+      setActiveSuggestionIndex((prev) =>
+        prev < suggestions.length - 1 ? prev + 1 : 0
+      );
+      return;
+    }
+
+    if (e.key === 'ArrowUp' && suggestions.length > 0) {
+      e.preventDefault();
+      setActiveSuggestionIndex((prev) =>
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      setSuggestions([]);
+      setActiveSuggestionIndex(-1);
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (suggestions.length > 0 && activeSuggestionIndex >= 0) {
+        selectSuggestion(suggestions[activeSuggestionIndex]);
+      } else {
+        runAddressLookup();
+      }
     }
   };
 
@@ -194,7 +320,11 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
           if (response.ok) {
             const data = await response.json();
             if (data.address) {
-              setFormData(prev => ({ ...prev, shop_address: data.address }));
+              if (!suppressReverseGeocode.current) {
+                setFormData(prev => ({ ...prev, shop_address: data.address }));
+              } else {
+                suppressReverseGeocode.current = false;
+              }
             }
           }
         } catch (error) {
@@ -210,14 +340,6 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
     }
   }, [position]);
 
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,16 +683,62 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                 <label className="block text-sm font-medium text-zinc-300 mb-2">
                   Shop Address *
                 </label>
-                <input
-                  type="text"
-                  name="shop_address"
-                  value={formData.shop_address}
-                  onChange={handleInputChange}
-                  required
-                  placeholder={fetchingAddress ? "Fetching address..." : "Uit 3a, Thaba Park, Hooggelegen Rd, Durbanville, Cape Town"}
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50"
-                  disabled={fetchingAddress}
-                />
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="shop_address"
+                      value={formData.shop_address}
+                      onChange={handleInputChange}
+                      onKeyDown={handleAddressKeyDown}
+                      onBlur={handleAddressBlur}
+                      onFocus={handleAddressFocus}
+                      required
+                      placeholder={fetchingAddress ? "Fetching address..." : "Uit 3a, Thaba Park, Hooggelegen Rd, Durbanville, Cape Town"}
+                      className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white focus:border-amber-500 focus:outline-none transition-colors disabled:opacity-50"
+                      disabled={fetchingAddress}
+                    />
+                    <button
+                      type="button"
+                      onClick={runAddressLookup}
+                      disabled={fetchingAddress || !formData.shop_address.trim()}
+                      className="px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Search
+                    </button>
+                  </div>
+
+                  {(suggestionsLoading || suggestions.length > 0 || showNoResults) && (
+                    <div className="absolute left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-lg max-h-56 overflow-auto z-[9999]">
+                      {suggestionsLoading && (
+                        <div className="px-4 py-3 text-sm text-zinc-400">Searching...</div>
+                      )}
+
+                      {!suggestionsLoading && suggestions.length === 0 && (
+                        <div className="px-4 py-3 text-sm text-zinc-400">
+                          No results. Please select the closest pin for an average location.
+                        </div>
+                      )}
+
+                      {suggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectSuggestion(suggestion)}
+                          className={`w-full text-left px-4 py-3 text-zinc-400 transition-colors ${
+                            index === activeSuggestionIndex
+                              ? 'bg-zinc-800'
+                              : 'hover:bg-zinc-800'
+                          }`}
+                        >
+                          {suggestion.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {geocodingAddress && (
                   <p className="text-xs text-cyan-400 mt-2">Finding location...</p>
                 )}

@@ -289,6 +289,7 @@ app.get("/api/reverse-geocode", async (c) => {
 // Forward geocode endpoint to convert address to coordinates (handles mobile CORS issues)
 app.get("/api/geocode", async (c) => {
   const q = c.req.query("q");
+  const limit = parseInt((c.req.query("limit") as string) || "1", 10);
 
   if (!q) {
     return c.json({ error: "Missing q parameter" }, 400);
@@ -296,7 +297,7 @@ app.get("/api/geocode", async (c) => {
 
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=za&limit=1`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=za&limit=${limit}`,
       {
         headers: {
           "User-Agent": "ExoCoffee-Web",
@@ -305,13 +306,26 @@ app.get("/api/geocode", async (c) => {
     );
 
     const data = await response.json() as any;
-    
+
     if (Array.isArray(data) && data.length > 0) {
-      const result = data[0];
-      return c.json({
-        lat: parseFloat(result.lat),
-        lon: parseFloat(result.lon),
-      });
+      if (limit === 1) {
+        const result = data[0];
+        return c.json({
+          lat: parseFloat(result.lat),
+          lon: parseFloat(result.lon),
+          display_name: result.display_name,
+        });
+      }
+
+      return c.json(
+        data
+          .filter((item: any) => item.lat && item.lon)
+          .map((item: any) => ({
+            lat: item.lat,
+            lon: item.lon,
+            display_name: item.display_name,
+          }))
+      );
     }
 
     return c.json({ error: "Address not found" }, 404);
