@@ -1,17 +1,17 @@
-import { Wrench, Gauge, Droplet, Zap, Clock, Shield } from 'lucide-react';
+import { Wrench, Gauge, Droplet, Zap, Clock, Shield, Smile, SmilePlus, PaintRoller, HousePlug, Plug, Stethoscope } from 'lucide-react';
 
 const services = [
   {
     icon: Wrench,
     title: 'Machine Repair',
-    description: 'Expert diagnosis and repair of all espresso machine brands and models',
+    description: 'Expert diagnosis and repair of commercial espresso machine brands and models',
     color: 'from-cyan-500 to-blue-500',
   },
   {
     icon: Gauge,
     title: 'Pressure Calibration',
     description: 'Precise pressure and temperature calibration for optimal extraction',
-    color: 'from-blue-500 to-indigo-500',
+    color: 'from-yellow-400 to-lime-500',
   },
   {
     icon: Droplet,
@@ -21,7 +21,7 @@ const services = [
   },
   {
     icon: Zap,
-    title: 'Preventive Maintenance',
+    title: 'Preventative Maintenance',
     description: 'Regular maintenance plans to prevent costly breakdowns',
     color: 'from-purple-500 to-pink-500',
   },
@@ -32,10 +32,29 @@ const services = [
     color: 'from-red-500 to-rose-500',
   },
   {
-    icon: Shield,
-    title: 'Parts & Warranty',
-    description: 'Quality OEM parts with warranty on all repairs and installations',
+    icon: Smile,
+    title: 'Friendly Support',
+    description: 'Friendly and knowledgeable support to answer all of your espresso machine questions',
     color: 'from-indigo-500 to-violet-500',
+  },
+  {
+    icon: PaintRoller,
+    title: 'Refurbishment',
+    description: 'Professional refurbishment services to restore your espresso machine to like-new condition',
+    color: 'from-blue-500 to-indigo-500',
+
+  },
+  {
+    icon: Plug,
+    title: 'Upgrades & Modifications',
+    description: 'Professional upgrades and modifications to enhance your espresso machine performance',
+    color: 'from-green-500 to-emerald-500',
+  },
+  {
+    icon: Stethoscope,
+    title: 'Diagnostics & Health Checks',
+    description: 'In-depth professional diagnostics and health check to ensure your espresso machine is always running at its best',
+    color: 'from-orange-500 to-amber-500',
   },
 ];
 
@@ -48,7 +67,7 @@ export default function Services() {
             Our Services
           </h2>
           <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
-            Comprehensive espresso machine care from certified technicians
+            Comprehensive espresso machine care from experienced technicians
           </p>
         </div>
 

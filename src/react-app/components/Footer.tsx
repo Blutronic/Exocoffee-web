@@ -42,7 +42,7 @@ export default function Footer() {
             </div>
             <p className="text-zinc-400 text-sm leading-relaxed">
               Professional espresso machine repair and maintenance services. 
-              Keeping your coffee business running smoothly since 2009.
+              Keeping your coffee business running smoothly since 2021.
             </p>
           </div>
 
@@ -51,9 +51,9 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Services</h3>
             <ul className="space-y-2 text-sm">
               <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Machine Repair</a></li>
-              <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Preventive Maintenance</a></li>
-              <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Emergency Service</a></li>
-              <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Parts & Warranty</a></li>
+              <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Preventative Maintenance</a></li>
+              <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Diagnostics & Health Checks</a></li>
+              <li><a href="#" className="text-zinc-400 hover:text-cyan-500 transition-colors">Refurbishment & Upgrades</a></li>
             </ul>
           </div>
 

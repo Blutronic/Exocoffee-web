@@ -506,7 +506,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Shop/Business Name
+                    Business Name
                   </label>
                   <input
                     type="text"
@@ -519,7 +519,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Machine make/model
+                    Machine Make/Model
                   </label>
                   <input
                     type="text"
@@ -681,7 +681,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Shop Address *
+                  Business Address *
                 </label>
                 <div className="relative">
                   <div className="flex gap-2">
@@ -815,7 +815,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                     <p className="text-white">{formData.customer_phone || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-zinc-500">Shop/Business Name</p>
+                    <p className="text-zinc-500">Business Name</p>
                     <p className="text-white">{formData.shop_name || '—'}</p>
                   </div>
                 </div>
@@ -826,7 +826,7 @@ export default function QuoteForm({ onClose }: QuoteFormProps) {
                 <h4 className="font-semibold text-white text-sm">Location Information</h4>
                 <div className="space-y-3 text-sm">
                   <div>
-                    <p className="text-zinc-500">Shop Address</p>
+                    <p className="text-zinc-500">Business Address</p>
                     <p className="text-white">{formData.shop_address || '—'}</p>
                   </div>
                   {distance !== null && (
